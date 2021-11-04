@@ -8,6 +8,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Spatie\Permission\Models\Role;
+use App\Models\Department;
+use App\Models\Designation;
+use Illuminate\Support\Facades\Route;
 
 class UserController extends Controller
 {
@@ -31,7 +34,7 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $data = User::orderBy('id', 'desc')->paginate(5);
+        $data = User::orderBy('id', 'desc')->paginate(5000);
         
         return view('users.index', compact('data'));
     }
@@ -43,9 +46,11 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::pluck('name','name')->all();
+        $roles = Role::all(); 
+        $department = Department::all();  
+        $designation = Designation::all();
 
-        return view('users.create', compact('roles'));
+        return view('users.create', compact('roles','department','designation'));
     }
 
     /**
@@ -58,19 +63,29 @@ class UserController extends Controller
     {
         $this->validate($request, [
             'name' => 'required',
+            'fname' => 'required',
+            'image' => 'required',
+            'address' => 'required',
+            'department' => 'required',
+            'designation' => 'required',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|confirmed',
-            'roles' => 'required'
+            'roles' => 'required|not_in:0',
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
-    
+        
+
         $input = $request->all();
         $input['password'] = Hash::make($input['password']);
+        $imageName = $input['name'].'-'.$input['fname'].'.'.$request->image->extension();
+
+       $input['image']=$imageName;
+       $request->image->move(public_path('images/user'), $imageName);
     
         $user = User::create($input);
         $user->assignRole($request->input('roles'));
     
-        return redirect()->route('users.index')
-            ->with('success', 'User created successfully.');
+        return redirect()->route('users.index')->with('success', 'User created successfully.');
     }
 
     /**
@@ -95,10 +110,14 @@ class UserController extends Controller
     public function edit($id)
     {
         $user = User::find($id);
-        $roles = Role::pluck('name', 'name')->all();
-        $userRole = $user->roles->pluck('name', 'name')->all();
+        $roles = Role::pluck('name', 'name')->all();        
+        $role = Role::all(); 
+        $userRole = $user->roles->pluck('name', 'name')->all();        
+        $department = Department::all();     
+        $designation = Designation::all();
+ 
     
-        return view('users.edit', compact('user', 'roles', 'userRole'));
+        return view('users.edit', compact('user', 'roles', 'role', 'userRole','department','designation'));
     }
 
     /**
@@ -109,33 +128,51 @@ class UserController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
-    {
+    { 
         $this->validate($request, [
             'name' => 'required',
-            'email' => 'required|email|unique:users,email,'.$id,
-            'password' => 'confirmed',
-            'roles' => 'required'
+            'fname' => 'required',
+            //'image' => 'required',
+            'address' => 'required',
+            'department' => 'required',
+            'designation' => 'required',
+            'email' => 'required',
+            //'password' => 'required|confirmed',
+            'roles' => 'required|not_in:0',
+            //'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
         ]);
     
         $input = $request->all();
         
-        if(!empty($input['password'])) { 
-            $input['password'] = Hash::make($input['password']);
-        } else {
-            $input = Arr::except($input, array('password'));    
+        // if(!empty($input['password'])) 
+        // { 
+        //     $input['password'] = Hash::make($input['password']);
+        // } 
+        // else 
+        // {
+        //     $input = Arr::except($input, array('password'));    
+        // }
+        
+        if(!empty($input['image']))
+        {
+            $imageName = $input['name'].'-'.$input['fname'].'.'.$request->image->extension();
+
+            $input['image']=$imageName;
+            $request->image->move(public_path('images/user'), $imageName);
         }
-    
+        else
+        {
+            $input = Arr::except($input, array('image'));  
+        }
+        
         $user = User::find($id);
         $user->update($input);
 
-        DB::table('model_has_roles')
-            ->where('model_id', $id)
-            ->delete();
+        DB::table('model_has_roles')->where('model_id', $id)->delete();
     
         $user->assignRole($request->input('roles'));
     
-        return redirect()->route('users.index')
-            ->with('success', 'User updated successfully.');
+        return redirect()->route('users.index')->with('success', 'User updated successfully.');
     }
 
     /**
@@ -148,7 +185,6 @@ class UserController extends Controller
     {
         User::find($id)->delete();
 
-        return redirect()->route('users.index')
-            ->with('success', 'User deleted successfully.');
+        return redirect()->route('users.index')->with('success', 'User deleted successfully.');
     }
 }

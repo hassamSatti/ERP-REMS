@@ -15,12 +15,22 @@ class UserTableSeeder extends Seeder
      *
      * @return void
      */
+
     public function run()
     {
         $user = User::create([
             'name' => 'Admin Login', 
-            'email' => 'adminLogin@gmail.com',
-            'password' => Hash::make('12345678')
+            'fname' => 'N/A', 
+            'image' => 'Hassam Satti-M Ikhlaq.jpg',
+            'cnic' => 'N/A',
+            'phone' => 'N/A',
+            'email' => 'admin@gmail.com',
+            'password' => Hash::make('12345678'),
+            'address' => 'N/A',
+            'department' => '1',
+            'designation' => '1',
+            'user_type' => '0',
+            'user_status' => '1',
         ]);
          
         $role = Role::find(1);
